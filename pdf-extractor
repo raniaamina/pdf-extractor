@@ -1,0 +1,81 @@
+#!/bin/bash
+
+if [ "$1" = "--help" ] ; then
+  echo "Usage: pdf-extractor [FILE-NAME...] then choose your action
+  i.e: pdf-extractor my-files.pdf"
+  echo 
+  echo "--help             show this help page"
+  echo "--install-dep      install depencenies (for debian base only)"
+  echo  
+  exit 0
+fi
+
+if [ "$1" = "--version" ] ; then
+  echo "v1.01"
+  exit 0
+fi
+
+if [ "$1" = "--install-dep" ] ; then
+  sudo apt install pdftk inkscape ghostscript
+  exit 0
+fi
+
+echo "Welcome to Simple PDF Extractor"
+SOURCE=$1
+
+PS3='Enter the number: '
+options=("Extract PDF" "Extract to SVG" "Extract Custom Range" "Cancel")
+select opt in "${options[@]}"
+do
+    case $opt in
+        "Extract PDF")
+            echo
+            echo "This action will extract your selected PDF to separted pages"
+            echo
+            read -e -p "Create Directory to save extracted filed: " DIRECTORY
+            mkdir $DIRECTORY
+            cd $DIRECTORY
+            echo "Extracting ..."
+            pdftk ../"$SOURCE" burst 
+            echo "Extracted to: $DIRECTORY"
+            break
+            ;;
+        "Extract to SVG")
+            echo
+            echo "This action will extract your selected PDF to separted SVG files"
+            echo
+            read -e -p "Create Directory to save extracted filed: " DIRECTORY
+            mkdir $DIRECTORY
+            cd $DIRECTORY
+            echo "Extracting ..."
+            pdftk ../"$SOURCE" burst 
+            for i in *.pdf; do inkscape -z --file=$i --export-plain-svg="${i%.*}.svg"; 
+            echo 'Extracting' "${i%.*}.svg"
+            done 
+            rm -f *.pdf *.txt
+            echo "Extracted to: $DIRECTORY"
+            break
+            ;;
+        "Extract Custom Range")
+            echo
+            echo "This action will extract selected range from your selected PDF to separted pages"
+            echo
+            read -e -p "Start Page Range: " START
+            read -e -p "End Page Range: " END 
+            read -e -p "Create Directory to save extracted filed: " DIRECTORY
+            mkdir $DIRECTORY
+            cd $DIRECTORY
+            echo "Extracting ..."
+            gs -sDEVICE=pdfwrite -dNOPAUSE -dBATCH -dFirstPage=$START -dLastPage=$END -sOutputFile=".temp-file.pdf" ../"$SOURCE"
+            pdftk ".temp-file.pdf" burst 
+            rm -f .temp-file.pdf
+            echo "Extracted to: $DIRECTORY"
+            break
+            ;;
+        "Cancel")
+            exit
+            ;;
+        *) echo "Hmm, wrong option! There's no option: $REPLY";;
+    esac
+done;
+echo " "
