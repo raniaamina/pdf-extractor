@@ -1,8 +1,5 @@
 #!/bin/bash
-
-SOURCE=$1
-DIRECTORY=$3
-RANGE=$(pdftk $1 dump_data | grep NumberOfPages | cut -c 16-)
+VERSION=$(echo v2.11)
 
 # color
 RED='\033[0;31m'
@@ -10,6 +7,7 @@ GR='\033[0;32m'
 NC='\033[0m'
 
 if [ "$1" = "--help" ] ; then
+  echo
   echo "Usage: pdf-extractor [FILE-NAME...] then choose your action
   i.e: pdf-extractor my-files.pdf"
   echo 
@@ -20,7 +18,7 @@ if [ "$1" = "--help" ] ; then
 fi
 
 if [ "$1" = "--version" ] ; then
-  echo "v1.01"
+  echo "PDF-Extractor $VERSION"
   exit 0
 fi
 
@@ -29,10 +27,42 @@ if [ "$1" = "--install-dep" ] ; then
   exit 0
 fi
 
-echo "Welcome to Simple PDF Extractor"
-SOURCE=$1
 
-PS3='Enter the number: '
+SOURCE=$1
+DIRECTORY=$3
+
+# files checking
+## if no files
+if [ "$1" == "" ] ; then
+  echo
+  pdf-extractor --help
+  echo
+  exit 0
+fi
+
+if [ "${SOURCE: -4}" == ".pdf" ]; then
+echo ""
+else
+echo
+echo -e ${RED}"Only accept PDF File!${NC}"
+echo
+exit
+fi
+
+if [ ! -f $SOURCE ]; then
+  echo -e "${RED}File $1 not found!${NC}"
+  echo Please recheck the file name.
+  echo
+  exit
+else
+  echo -e "Welcome to Simple PDF Extractor $VERSION\n"
+fi
+
+# Starting Program
+# echo -e "Welcome to Simple PDF Extractor $VERSION\n"
+
+RANGE=$(pdftk $1 dump_data | grep NumberOfPages | cut -c 16-)
+PS3='Enter the number options: '
 options=("Extract PDF" "Extract to SVG" "Extract to PNG" "Extract Custom Range" "Cancel")
 select opt in "${options[@]}"
 do
@@ -52,7 +82,7 @@ do
             echo "Extracting ..."
             echo "Starting extract PDF to $DIRECTORY at $(date)" &>> /tmp/pdf-extractor.log
             pdftk ../"$SOURCE" burst &>> /tmp/pdf-extractor.log
-            echo "Extracted to: $DIRECTORY"
+            echo -e "Extracted to:${GR} $DIRECTORY ${NC}"
             rm doc_data.txt
             echo "Finishing extract PDF at $(date)" &>> /tmp/pdf-extractor.log
             echo " " &>> /tmp/pdf-extractor.log
@@ -64,22 +94,23 @@ do
             echo
             read -e -p "Create Directory to save extracted filed: " DIRECTORY
             echo ""
-            if [[ -d $DIRECTORY ]]; then
+            if [[ -d $DIRECTORY/.tmp ]]; then
                 echo -e "${RED}Directory exist! Skipping create directory${NC}"; else
                 echo -e "${GR}Creating Directory${NC}"
-                mkdir $DIRECTORY
+                mkdir -p $DIRECTORY/.tmp
             fi
-            cd $DIRECTORY
+            cd $DIRECTORY/.tmp
             echo "Extracting ..."
             echo "Starting extract SVG to $DIRECTORY at $(date)" &>> /tmp/pdf-extractor.log
-            pdftk ../"$SOURCE" burst &>> /tmp/pdf-extractor.log
-            for i in *.pdf; do inkscape -l -o "${i%.*}.svg" $i &>> /tmp/pdf-extractor.log 
+            pdftk ../../"$SOURCE" burst &>> /tmp/pdf-extractor.log
+            for i in *.pdf; do inkscape -l -o "../${i%.*}.svg" $i &>> /tmp/pdf-extractor.log 
             echo 'Extracting' "${i%.*}.svg"
             done 
             rm -f *.pdf *.txt
+            cd .. && rm -r .tmp
             echo "Finishing extract SVG at $(date)" &>> /tmp/pdf-extractor.log
             echo " " &>> /tmp/pdf-extractor.log
-            echo "Extracted to: $DIRECTORY"
+            echo -e "Extracted to:${GR} $DIRECTORY ${NC}"
             break
             ;;
         "Extract to PNG")
@@ -88,26 +119,24 @@ do
             echo
             read -e -p "Create Directory to save extracted filed: " DIRECTORY
             echo ""
-            if [[ -d $DIRECTORY ]]; then
+            if [[ -d $DIRECTORY/.tmp ]]; then
                 echo -e "${RED}Directory exist! Skipping create directory${NC}"; else
                 echo -e "${GR}Creating Directory${NC}"
                 mkdir -p $DIRECTORY/.tmp
             fi
-            cd $DIRECTORY
+            cd $DIRECTORY/.tmp
             echo "Extracting ..."
             echo "Starting extract PNG to $DIRECTORY at $(date)" &>> /tmp/pdf-extractor.log
-            pdftk ../"$SOURCE" burst &>> /tmp/pdf-extractor.log
-            for i in *.pdf; do inkscape -l -o ".tmp/${i%.*}.svg" $i &>> /tmp/pdf-extractor.log
+            pdftk ../../"$SOURCE" burst &>> /tmp/pdf-extractor.log
+            for i in *.pdf; do inkscape --export-type=png --export-dpi=600  -o "../${i%.*}.png" $i &>> /tmp/pdf-extractor.log
             echo 'Extracting' "${i%.*}.png"
             done
-            cd .tmp
-            for i in *.svg; do inkscape --export-type=png -d 300 -o "../${i%.*}.png" "$i" &>> /tmp/pdf-extractor.log; done
+            rm -f *.pdf *.txt *.svg
             cd .. 
             rm  -r .tmp
-            rm -f *.pdf *.txt
             echo "Finishing extract PNG at $(date)" &>> /tmp/pdf-extractor.log
             echo " " &>> /tmp/pdf-extractor.log
-            echo "Extracted to: $DIRECTORY"
+            echo -e "Extracted to:${GR} $DIRECTORY ${NC}"
             break
             ;;
         "Extract Custom Range")
@@ -129,14 +158,15 @@ do
             gs -sDEVICE=pdfwrite -dNOPAUSE -dBATCH -dFirstPage=$START -dLastPage=$END -sOutputFile=".temp-file.pdf" ../"$SOURCE" &>> /tmp/pdf-extractor.log
             pdftk ".temp-file.pdf" burst &>> /tmp/pdf-extractor.log
             rm -f .temp-file.pdf
+            rm -f *.txt
             echo "Finishing extract custom range at $(date)" &>> /tmp/pdf-extractor.log
-            echo "Extracted to: $DIRECTORY"
+            echo -e "Extracted to:${GR} $DIRECTORY ${NC}"
             break
             ;;
         "Cancel")
             exit
             ;;
-        *) echo "Hmm, wrong option! There's no option: $REPLY";;
+        *) echo -e ${RED}"Hmm, wrong option! There's no option: $REPLY" ${NC};;
     esac
 done;
 echo " "
