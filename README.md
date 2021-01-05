@@ -37,6 +37,17 @@ basic usage:
 
 Type: `pdf-extractor --help` for more information
 
+
+## Known Problem
+Some of distribution can't use/get pdftk from PPA, so here is an option if you get a problem with installing pdftk.
+1. sudo apt install default-jre-headless libcommons-lang3-java libbcprov-java
+2. download the deb file of pdftk-java from https://packages.ubuntu.com/focal/pdftk-java
+3. download the deb file of pdftk from https://packages.ubuntu.com/focal/pdftk
+
+Thanks for (@alezzacreative)[https://github.com/alezzacreative] who giving information about this.
+
+
+
 ## Disclaimer
 This script basicly only structured command that arranged to made it easy to use for specific purpose. PDF Extractor come with no warranty, so use with your own risk. 
 
