@@ -1,5 +1,14 @@
 #!/bin/bash
 
+SOURCE=$1
+DIRECTORY=$3
+RANGE=$(pdftk $1 dump_data | grep NumberOfPages | cut -c 16-)
+
+# color
+RED='\033[0;31m'
+GR='\033[0;32m'
+NC='\033[0m'
+
 if [ "$1" = "--help" ] ; then
   echo "Usage: pdf-extractor [FILE-NAME...] then choose your action
   i.e: pdf-extractor my-files.pdf"
@@ -24,20 +33,29 @@ echo "Welcome to Simple PDF Extractor"
 SOURCE=$1
 
 PS3='Enter the number: '
-options=("Extract PDF" "Extract to SVG" "Extract Custom Range" "Cancel")
+options=("Extract PDF" "Extract to SVG" "Extract to PNG" "Extract Custom Range" "Cancel")
 select opt in "${options[@]}"
 do
     case $opt in
         "Extract PDF")
             echo
-            echo "This action will extract your selected PDF to separted pages"
+            echo "This action will extract your selected PDF to separated pages"
             echo
             read -e -p "Create Directory to save extracted filed: " DIRECTORY
-            mkdir $DIRECTORY
+            echo ""
+            if [[ -d $DIRECTORY ]]; then
+                echo -e "${RED}Directory exist! Skipping create directory${NC}"; else
+                echo -e "${GR}Creating Directory${NC}"
+                mkdir $DIRECTORY
+            fi
             cd $DIRECTORY
             echo "Extracting ..."
-            pdftk ../"$SOURCE" burst 
+            echo "Starting extract PDF to $DIRECTORY at $(date)" &>> /tmp/pdf-extractor.log
+            pdftk ../"$SOURCE" burst &>> /tmp/pdf-extractor.log
             echo "Extracted to: $DIRECTORY"
+            rm doc_data.txt
+            echo "Finishing extract PDF at $(date)" &>> /tmp/pdf-extractor.log
+            echo " " &>> /tmp/pdf-extractor.log
             break
             ;;
         "Extract to SVG")
@@ -45,30 +63,73 @@ do
             echo "This action will extract your selected PDF to separted SVG files"
             echo
             read -e -p "Create Directory to save extracted filed: " DIRECTORY
-            mkdir $DIRECTORY
+            echo ""
+            if [[ -d $DIRECTORY ]]; then
+                echo -e "${RED}Directory exist! Skipping create directory${NC}"; else
+                echo -e "${GR}Creating Directory${NC}"
+                mkdir $DIRECTORY
+            fi
             cd $DIRECTORY
             echo "Extracting ..."
-            pdftk ../"$SOURCE" burst 
-            for i in *.pdf; do inkscape -z --file=$i --export-plain-svg="${i%.*}.svg"; 
+            echo "Starting extract SVG to $DIRECTORY at $(date)" &>> /tmp/pdf-extractor.log
+            pdftk ../"$SOURCE" burst &>> /tmp/pdf-extractor.log
+            for i in *.pdf; do inkscape -l -o "${i%.*}.svg" $i &>> /tmp/pdf-extractor.log 
             echo 'Extracting' "${i%.*}.svg"
             done 
             rm -f *.pdf *.txt
+            echo "Finishing extract SVG at $(date)" &>> /tmp/pdf-extractor.log
+            echo " " &>> /tmp/pdf-extractor.log
+            echo "Extracted to: $DIRECTORY"
+            break
+            ;;
+        "Extract to PNG")
+            echo
+            echo "This action will extract your selected PDF to separted PNG files"
+            echo
+            read -e -p "Create Directory to save extracted filed: " DIRECTORY
+            echo ""
+            if [[ -d $DIRECTORY ]]; then
+                echo -e "${RED}Directory exist! Skipping create directory${NC}"; else
+                echo -e "${GR}Creating Directory${NC}"
+                mkdir -p $DIRECTORY/.tmp
+            fi
+            cd $DIRECTORY
+            echo "Extracting ..."
+            echo "Starting extract PNG to $DIRECTORY at $(date)" &>> /tmp/pdf-extractor.log
+            pdftk ../"$SOURCE" burst &>> /tmp/pdf-extractor.log
+            for i in *.pdf; do inkscape -l -o ".tmp/${i%.*}.svg" $i &>> /tmp/pdf-extractor.log
+            echo 'Extracting' "${i%.*}.png"
+            done
+            cd .tmp
+            for i in *.svg; do inkscape --export-type=png -d 300 -o "../${i%.*}.png" "$i" &>> /tmp/pdf-extractor.log; done
+            cd .. 
+            rm  -r .tmp
+            rm -f *.pdf *.txt
+            echo "Finishing extract PNG at $(date)" &>> /tmp/pdf-extractor.log
+            echo " " &>> /tmp/pdf-extractor.log
             echo "Extracted to: $DIRECTORY"
             break
             ;;
         "Extract Custom Range")
             echo
             echo "This action will extract selected range from your selected PDF to separted pages"
+            echo "Available range is 1 until $RANGE"
             echo
             read -e -p "Start Page Range: " START
             read -e -p "End Page Range: " END 
             read -e -p "Create Directory to save extracted filed: " DIRECTORY
-            mkdir $DIRECTORY
+            if [[ -d $DIRECTORY ]]; then
+                echo -e "${RED}Directory exist! Skipping create directory${NC}"; else
+                echo -e "Creating Directory"
+                mkdir $DIRECTORY
+            fi
             cd $DIRECTORY
             echo "Extracting ..."
-            gs -sDEVICE=pdfwrite -dNOPAUSE -dBATCH -dFirstPage=$START -dLastPage=$END -sOutputFile=".temp-file.pdf" ../"$SOURCE"
-            pdftk ".temp-file.pdf" burst 
+            echo "Starting extract custom range to $DIRECTORY at $(date)" &>> /tmp/pdf-extractor.log
+            gs -sDEVICE=pdfwrite -dNOPAUSE -dBATCH -dFirstPage=$START -dLastPage=$END -sOutputFile=".temp-file.pdf" ../"$SOURCE" &>> /tmp/pdf-extractor.log
+            pdftk ".temp-file.pdf" burst &>> /tmp/pdf-extractor.log
             rm -f .temp-file.pdf
+            echo "Finishing extract custom range at $(date)" &>> /tmp/pdf-extractor.log
             echo "Extracted to: $DIRECTORY"
             break
             ;;
