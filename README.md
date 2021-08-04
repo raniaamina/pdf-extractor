@@ -44,7 +44,7 @@ Some of distribution can't use/get pdftk from PPA, so here is an option if you g
 2. download the deb file of pdftk-java from https://packages.ubuntu.com/focal/pdftk-java
 3. download the deb file of pdftk from https://packages.ubuntu.com/focal/pdftk
 
-Thanks for (@alezzacreative)[https://github.com/alezzacreative] who giving information about this.
+Thanks for [@alezzacreative](https://github.com/alezzacreative) who giving information about this.
 
 
 
