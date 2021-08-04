@@ -1,5 +1,6 @@
 #!/bin/bash
-VERSION=$(echo v2.11)
+set -e
+VERSION=$(echo v2.15)
 
 # color
 RED='\033[0;31m'
@@ -18,7 +19,7 @@ if [ "$1" = "--help" ] ; then
 fi
 
 if [ "$1" = "--version" ] ; then
-  echo "PDF-Extractor $VERSION"
+  echo -e "\nPDF-Extractor ${GR}$VERSION${NC}\n"
   exit 0
 fi
 
@@ -41,12 +42,22 @@ if [ "$1" == "" ] ; then
 fi
 
 if [ "${SOURCE: -4}" == ".pdf" ]; then
-echo ""
+  echo ""
 else
-echo
-echo -e ${RED}"Only accept PDF File!${NC}"
-echo
-exit
+  if [ "${SOURCE: -3}" == ".ai" ]; then
+    if [ ! -f $SOURCE ]; then
+    echo -e "\n${RED}File $1 not found!${NC}"
+    echo -e "Please recheck the file name.\n"
+    exit
+    fi
+    echo -e "\nIllustrator file detected!"
+    sleep 1
+    cp -f $SOURCE $SOURCE.pdf
+    SOURCE=$(echo "$SOURCE.pdf")
+  else
+  echo -e ${RED}"\nOnly accept PDF/AI File!${NC}\n"
+  exit
+  fi
 fi
 
 if [ ! -f $SOURCE ]; then
@@ -68,9 +79,7 @@ select opt in "${options[@]}"
 do
     case $opt in
         "Extract PDF")
-            echo
-            echo "This action will extract your selected PDF to separated pages"
-            echo
+            echo -e "\nThis action will extract your selected PDF to separated pages\n"
             read -e -p "Create Directory to save extracted filed: " DIRECTORY
             echo ""
             if [[ -d $DIRECTORY ]]; then
@@ -89,9 +98,7 @@ do
             break
             ;;
         "Extract to SVG")
-            echo
-            echo "This action will extract your selected PDF to separted SVG files"
-            echo
+            echo -e "\nThis action will extract your selected PDF to separted SVG files\n"
             read -e -p "Create Directory to save extracted filed: " DIRECTORY
             echo ""
             if [[ -d $DIRECTORY/.tmp ]]; then
@@ -114,9 +121,7 @@ do
             break
             ;;
         "Extract to PNG")
-            echo
-            echo "This action will extract your selected PDF to separted PNG files"
-            echo
+            echo "\nThis action will extract your selected PDF to separted PNG files\n"
             read -e -p "Create Directory to save extracted filed: " DIRECTORY
             echo ""
             if [[ -d $DIRECTORY/.tmp ]]; then
@@ -140,12 +145,11 @@ do
             break
             ;;
         "Extract Custom Range")
-            echo
-            echo "This action will extract selected range from your selected PDF to separted pages"
-            echo "Available range is 1 until $RANGE"
-            echo
+            echo -e "\nThis action will extract selected range from your selected PDF to separted pages"
+            echo -e "Available range is 1 until $RANGE\n"
             read -e -p "Start Page Range: " START
             read -e -p "End Page Range: " END 
+            read -e -p "Export as SVG? Default PDF (y/n): " FORMAT
             read -e -p "Create Directory to save extracted filed: " DIRECTORY
             if [[ -d $DIRECTORY ]]; then
                 echo -e "${RED}Directory exist! Skipping create directory${NC}"; else
@@ -159,11 +163,23 @@ do
             pdftk ".temp-file.pdf" burst &>> /tmp/pdf-extractor.log
             rm -f .temp-file.pdf
             rm -f *.txt
+            if [[ $FORMAT =~ ^[Yy]$ ]]; then
+              if [[ ! -d SVG ]]; 
+                then mkdir SVG; 
+              fi
+              for i in *.pdf; do inkscape -l -o "SVG/${i%.*}.svg" $i &>> /tmp/pdf-extractor.log 
+              echo "Converting to ${i%.*}.svg"
+              done
+              rm -f *.pdf
+              mv SVG/* .
+              rm -rf SVG
+            fi
             echo "Finishing extract custom range at $(date)" &>> /tmp/pdf-extractor.log
             echo -e "Extracted to:${GR} $DIRECTORY ${NC}"
             break
             ;;
         "Cancel")
+            echo -e "\nCatch you later!\n"
             exit
             ;;
         *) echo -e ${RED}"Hmm, wrong option! There's no option: $REPLY" ${NC};;
