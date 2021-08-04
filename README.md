@@ -22,7 +22,7 @@ Make sure git installed on your system before running command bellow.
 git clone https://github.com/raniaamina/pdf-extractor.git ~/.config/pdf-extractor
 cd ~/.config/pdf-extractor
 sudo chmod +x pdf-extractor
-sudo ln -s ~/.config/pdf-extractor /usr/local/bin/pdf-extractor
+sudo ln -s ~/.config/pdf-extractor/pdf-extractor /usr/local/bin/pdf-extractor
 ```
 
 ## Usage
